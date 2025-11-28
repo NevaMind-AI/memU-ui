@@ -82,7 +82,7 @@ const DialogComposer: React.FC<DialogComposerProps> = ({ onSendAsUser, onSendAsA
         }}
       />
 
-      <Divider sx={{ mb: 1 }} />
+      <Divider sx={{ mb: 1.5 }} />
 
       {/* Bottom bar: left tools + right actions */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 0 }}>

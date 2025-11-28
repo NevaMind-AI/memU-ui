@@ -111,7 +111,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
       </Menu>
 
       {/* Bottom action */}
-      <Box sx={{ pt: 1, borderTop: (theme) => `1px solid ${theme.palette.divider}` }}>
+      <Box sx={{ pt: 1.5, borderTop: (theme) => `1px solid ${theme.palette.divider}` }}>
         <Button
           fullWidth
           onClick={onCreateConversation}

@@ -1,12 +1,13 @@
 import { ChevronLeft, ChevronRight, DarkModeOutlined, LightModeOutlined } from '@mui/icons-material';
 import { Box, Drawer, IconButton } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useThemeContext } from '../../context/ThemeContext';
 import type { Conversation, ConversationItem } from '../../types/conversation';
-import { memorize, retrieve } from './client';
-import { CenterPanel, LeftPanel, RightPanel, type ConversationListItem, type MemoryCategoryListItem } from './components';
+import { memorize } from './client';
+import { CenterPanel, LeftPanel, RetrieveModal, RightPanel, type ConversationListItem } from './components';
 import { createNewConversationFromItems, deleteConversation, generateConversationId, getConversation, listConversations, renameConversation, upsertConversation } from './data/store';
+import type { MemorizeResponse } from '../../types/memory';
 
 const PlaygroundPage: React.FC = () => {
     const [isLeftDrawerOpen, setIsLeftDrawerOpen] = React.useState(false);
@@ -76,6 +77,7 @@ const PlaygroundPage: React.FC = () => {
     const [selectedConversationId, setSelectedConversationId] = React.useState<string | undefined>(undefined);
     const [currentContent, setCurrentContent] = React.useState<Conversation | null>(null);
     const [hasUnsavedNew, setHasUnsavedNew] = React.useState<boolean>(false);
+    const [isRetrieveModalOpen, setIsRetrieveModalOpen] = React.useState(false);
 
     // Load conversations on mount
     React.useEffect(() => {
@@ -92,26 +94,6 @@ const PlaygroundPage: React.FC = () => {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-    useEffect(() => {
-        const testFetch = async () => {
-            const response = await fetch('/api/memorize', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    "content": [
-                        { "role": "user", "content": { "text": "Hello!" } },
-                        { "role": "assistant", "content": { "text": "Hello, how can I assistant you today?" } }
-                    ]
-                })
-            });
-            const data = await response.json();
-            console.log("[PlaygroundPage] memorize response", data);
-        }
-        testFetch();
-    });
 
     const refreshListAndSelect = (id: string) => {
         const files = listConversations();
@@ -170,22 +152,21 @@ const PlaygroundPage: React.FC = () => {
         refreshListAndSelect(id);
     };
 
-    const handleMemorize = async () => {
-        if (!currentContent) { return; }
-        console.log('[PlaygroundPage] memorize currentContent', currentContent);
-        const response = await memorize(currentContent);
-        console.log('[PlaygroundPage] memorize response', response);
-    }
+    const handleMemorize = React.useCallback(async (): Promise<MemorizeResponse | null> => {
+        if (!currentContent || currentContent.content.length === 0) {
+            console.warn('[PlaygroundPage] handleMemorize: no conversation content to send');
+            return null;
+        }
+        return memorize(currentContent);
+    }, [currentContent]);
 
-    const handleRetrieve = async () => {
-        const response = await retrieve('What is user\'s cat\'s name?');
-        console.log('[PlaygroundPage] retrieve response', response);
-    }
+    const handleRetrieve = React.useCallback(() => {
+        setIsRetrieveModalOpen(true);
+    }, []);
 
-    // Placeholder state for memory categories
-    const [memoryCategories] = React.useState<MemoryCategoryListItem[]>([]);
-    const [selectedCategoryName] = React.useState<string | undefined>(undefined);
-    const handleSelectCategory = (name: string) => { console.log('Select category', name); };
+    const handleCloseRetrieveModal = React.useCallback(() => {
+        setIsRetrieveModalOpen(false);
+    }, []);
 
     return (
         <Box sx={overlayRootSx}>
@@ -291,13 +272,7 @@ const PlaygroundPage: React.FC = () => {
 
                 {/* Right column */}
                 <Box sx={{ ...rightPanelSx, p: 2, overflow: 'hidden', display: 'flex' }}>
-                    <RightPanel
-                        categories={memoryCategories}
-                        selectedName={selectedCategoryName}
-                        onSelectCategory={handleSelectCategory}
-                        onMemorize={handleMemorize}
-                        onRetrieve={handleRetrieve}
-                    />
+                    <RightPanel onMemorize={handleMemorize} onRetrieve={handleRetrieve} />
                 </Box>
             </Box>
 
@@ -323,14 +298,15 @@ const PlaygroundPage: React.FC = () => {
             >
                 <Box sx={{ width: '80vw', maxWidth: 360, height: '100%', ...panelBaseSx, borderRadius: 0, p: 2, overflow: 'hidden', display: 'flex' }}>
                     <RightPanel
-                        categories={memoryCategories}
-                        selectedName={selectedCategoryName}
-                        onSelectCategory={(name) => { setIsRightDrawerOpen(false); handleSelectCategory(name); }}
-                        onMemorize={() => { setIsRightDrawerOpen(false); handleMemorize(); }}
+                        onMemorize={async () => {
+                            setIsRightDrawerOpen(false);
+                            return handleMemorize();
+                        }}
                         onRetrieve={() => { setIsRightDrawerOpen(false); handleRetrieve(); }}
                     />
                 </Box>
             </Drawer>
+            <RetrieveModal open={isRetrieveModalOpen} onClose={handleCloseRetrieveModal} />
         </Box>
     );
 };

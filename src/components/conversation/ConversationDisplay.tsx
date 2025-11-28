@@ -220,10 +220,25 @@ const ConversationDisplay: React.FC<ConversationDisplayProps> = ({
     emptyDescription,
     messagesPadding,
 }) => {
+    const messagesContainerRef = React.useRef<HTMLDivElement | null>(null)
+    const conversationId = conversation?.conversation_id
+    const messageCount = conversation?.content?.length ?? 0
+
+    React.useEffect(() => {
+        if (!messagesContainerRef.current) { return }
+        messagesContainerRef.current.scrollTo({
+            top: messagesContainerRef.current.scrollHeight,
+            behavior: 'smooth',
+        })
+    }, [conversationId, messageCount])
+
     return (
         <ConversationContainer>
             {header}
-            <MessagesContainer sx={messagesPadding !== undefined ? { padding: messagesPadding } : undefined}>
+            <MessagesContainer
+                ref={messagesContainerRef}
+                sx={messagesPadding !== undefined ? { padding: messagesPadding } : undefined}
+            >
                 {contentLoading ? (
                     <Box sx={{
                         display: 'flex',

@@ -1,6 +1,7 @@
 import type { Conversation } from '../../types/conversation';
+import type { MemorizeResponse, RetrieveResponse } from '../../types/memory';
 
-export const memorize = async (conversation: Conversation) => {
+export const memorize = async (conversation: Conversation): Promise<MemorizeResponse | null> => {
     try {
         const response = await fetch('/api/memorize', {
             method: 'POST',
@@ -19,7 +20,7 @@ export const memorize = async (conversation: Conversation) => {
     }
 }
 
-export const retrieve = async (query: string) => {
+export const retrieve = async (query: string): Promise<RetrieveResponse | null> => {
     try {
         const response = await fetch('/api/retrieve', {
             method: 'POST',
