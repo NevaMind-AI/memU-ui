@@ -1,10 +1,14 @@
-export interface ConversationContentItem {
+export interface ConversationItem {
   role: string
-  content: string
+  content: ConversationItemTextContent
 }
 
-export interface ConversationContent {
+export interface ConversationItemTextContent {
+  text: string
+}
+
+export interface Conversation {
   conversation_id: string
-  content: ConversationContentItem[]
+  content: ConversationItem[]
 }
 

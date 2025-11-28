@@ -1,9 +1,9 @@
-import type { ConversationContentItem } from '../../../types/conversation';
+import type { ConversationItem } from '../../../types/conversation';
 
 export interface PlaygroundConversationFile {
   id: string;
   title: string;
-  content: ConversationContentItem[];
+  content: ConversationItem[];
   updated_at?: number;
 }
 
@@ -71,9 +71,9 @@ export const generateConversationId = (): string => {
   return `${ts}${random}`;
 };
 
-export const createNewConversationFromItems = (items: ConversationContentItem[]): PlaygroundConversationFile => {
+export const createNewConversationFromItems = (items: ConversationItem[]): PlaygroundConversationFile => {
   const id = generateConversationId();
-  const title = items[0]?.content?.slice(0, 100) || 'Untitled';
+  const title = items[0]?.content?.text?.slice(0, 100) || 'Untitled';
   const file: PlaygroundConversationFile = { id, title, content: items, updated_at: Date.now() };
   return upsertConversation(file);
 };

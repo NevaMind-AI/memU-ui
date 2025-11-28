@@ -1,11 +1,12 @@
 import { ChevronLeft, ChevronRight, DarkModeOutlined, LightModeOutlined } from '@mui/icons-material';
 import { Box, Drawer, IconButton } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
-import React from 'react';
-import { CenterPanel, LeftPanel, RightPanel, type ConversationListItem, type MemoryCategoryListItem } from './components';
-import type { ConversationContent, ConversationContentItem } from '../../types/conversation';
-import { listConversations, createNewConversationFromItems, upsertConversation, deleteConversation, renameConversation, generateConversationId, getConversation } from './data/store';
+import React, { useEffect } from 'react';
 import { useThemeContext } from '../../context/ThemeContext';
+import type { Conversation, ConversationItem } from '../../types/conversation';
+import { memorize, retrieve } from './client';
+import { CenterPanel, LeftPanel, RightPanel, type ConversationListItem, type MemoryCategoryListItem } from './components';
+import { createNewConversationFromItems, deleteConversation, generateConversationId, getConversation, listConversations, renameConversation, upsertConversation } from './data/store';
 
 const PlaygroundPage: React.FC = () => {
     const [isLeftDrawerOpen, setIsLeftDrawerOpen] = React.useState(false);
@@ -73,7 +74,7 @@ const PlaygroundPage: React.FC = () => {
     // Conversations state
     const [conversations, setConversations] = React.useState<ConversationListItem[]>([]);
     const [selectedConversationId, setSelectedConversationId] = React.useState<string | undefined>(undefined);
-    const [currentContent, setCurrentContent] = React.useState<ConversationContent | null>(null);
+    const [currentContent, setCurrentContent] = React.useState<Conversation | null>(null);
     const [hasUnsavedNew, setHasUnsavedNew] = React.useState<boolean>(false);
 
     // Load conversations on mount
@@ -84,7 +85,7 @@ const PlaygroundPage: React.FC = () => {
             if (files.length > 0) {
                 const first = files[0];
                 setSelectedConversationId(first.id);
-                setCurrentContent({ conversation_id: first.id, content: first.content as ConversationContentItem[] });
+                setCurrentContent({ conversation_id: first.id, content: first.content as ConversationItem[] });
             }
         } catch (e) {
             console.warn('Failed to load conversations', e);
@@ -92,13 +93,33 @@ const PlaygroundPage: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    useEffect(() => {
+        const testFetch = async () => {
+            const response = await fetch('/api/memorize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "content": [
+                        { "role": "user", "content": { "text": "Hello!" } },
+                        { "role": "assistant", "content": { "text": "Hello, how can I assistant you today?" } }
+                    ]
+                })
+            });
+            const data = await response.json();
+            console.log("[PlaygroundPage] memorize response", data);
+        }
+        testFetch();
+    });
+
     const refreshListAndSelect = (id: string) => {
         const files = listConversations();
         setConversations(files.map(f => ({ id: f.id, title: f.title })));
         setSelectedConversationId(id);
         const file = files.find(f => f.id === id);
         if (file) {
-            setCurrentContent({ conversation_id: id, content: file.content as ConversationContentItem[] });
+            setCurrentContent({ conversation_id: id, content: file.content as ConversationItem[] });
         }
     };
 
@@ -127,11 +148,11 @@ const PlaygroundPage: React.FC = () => {
         const found = files.find(f => f.id === id);
         if (!found) { return; }
         setSelectedConversationId(id);
-        setCurrentContent({ conversation_id: id, content: found.content as ConversationContentItem[] });
+        setCurrentContent({ conversation_id: id, content: found.content as ConversationItem[] });
         setHasUnsavedNew(false);
     };
 
-    const persistNewIfNeeded = (nextItems: ConversationContentItem[]): string => {
+    const persistNewIfNeeded = (nextItems: ConversationItem[]): string => {
         if (hasUnsavedNew || !selectedConversationId) {
             const saved = createNewConversationFromItems(nextItems);
             refreshListAndSelect(saved.id);
@@ -141,19 +162,29 @@ const PlaygroundPage: React.FC = () => {
         return selectedConversationId;
     };
 
-    const appendAndSave = (id: string, nextItems: ConversationContentItem[]) => {
+    const appendAndSave = (id: string, nextItems: ConversationItem[]) => {
         const existing = getConversation(id);
-        const title = existing?.title ?? (nextItems[0]?.content?.slice(0, 100) || 'Untitled');
+        const title = existing?.title ?? (nextItems[0]?.content?.text?.slice(0, 100) || 'Untitled');
         upsertConversation({ id, title, content: nextItems });
         setCurrentContent({ conversation_id: id, content: nextItems });
         refreshListAndSelect(id);
     };
 
+    const handleMemorize = async () => {
+        if (!currentContent) { return; }
+        console.log('[PlaygroundPage] memorize currentContent', currentContent);
+        const response = await memorize(currentContent);
+        console.log('[PlaygroundPage] memorize response', response);
+    }
+
+    const handleRetrieve = async () => {
+        const response = await retrieve('What is user\'s cat\'s name?');
+        console.log('[PlaygroundPage] retrieve response', response);
+    }
+
     // Placeholder state for memory categories
     const [memoryCategories] = React.useState<MemoryCategoryListItem[]>([]);
     const [selectedCategoryName] = React.useState<string | undefined>(undefined);
-    const handleMemorize = () => { console.log('Memorize'); };
-    const handleRetrieve = () => { console.log('Retrieve'); };
     const handleSelectCategory = (name: string) => { console.log('Select category', name); };
 
     return (
@@ -211,7 +242,7 @@ const PlaygroundPage: React.FC = () => {
                             if (selectedConversationId === id) {
                                 if (files.length > 0) {
                                     setSelectedConversationId(files[0].id);
-                                    setCurrentContent({ conversation_id: files[0].id, content: files[0].content as ConversationContentItem[] });
+                                    setCurrentContent({ conversation_id: files[0].id, content: files[0].content as ConversationItem[] });
                                 } else {
                                     setSelectedConversationId(undefined);
                                     setCurrentContent(null);
@@ -224,18 +255,18 @@ const PlaygroundPage: React.FC = () => {
                 {/* Center column */}
                 <Box sx={{ ...centerPanelSx }}>
                     <CenterPanel
-                        conversationContent={currentContent}
+                        conversation={currentContent}
                         contentLoading={false}
                         contentError={null}
                         onImportConversation={(data: any) => {
                             try {
-                                const items: ConversationContentItem[] = Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : [];
+                                const items: ConversationItem[] = Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : [];
                                 const normItems = items
-                                  .filter((m) => m && typeof m.role === 'string' && typeof m.content === 'string')
-                                  .map((m) => ({ role: m.role, content: m.content } as ConversationContentItem));
+                                    .filter((m) => m && typeof m.role === 'string')
+                                    .map((m) => ({ role: m.role, content: m.content } as ConversationItem));
                                 if (normItems.length === 0) { return; }
                                 const id = generateConversationId();
-                                const titleFromData = typeof data?.title === 'string' && data.title.trim() ? data.title.trim() : (normItems[0]?.content?.slice(0, 100) || 'Untitled');
+                                const titleFromData = typeof data?.title === 'string' && data.title.trim() ? data.title.trim() : (normItems[0]?.content?.text?.slice(0, 100) || 'Untitled');
                                 upsertConversation({ id, title: titleFromData, content: normItems });
                                 refreshListAndSelect(id);
                                 setHasUnsavedNew(false);
@@ -245,13 +276,13 @@ const PlaygroundPage: React.FC = () => {
                         }}
                         onSendAsUser={(text: string) => {
                             const existing = currentContent?.content || [];
-                            const nextItems = existing.length === 0 ? [{ role: 'user', content: text }] : [...existing, { role: 'user', content: text }];
+                            const nextItems = existing.length === 0 ? [{ role: 'user', content: { text } }] : [...existing, { role: 'user', content: { text } }];
                             const id = persistNewIfNeeded(nextItems);
                             appendAndSave(id, nextItems);
                         }}
                         onSendAsAssistant={(text: string) => {
                             const existing = currentContent?.content || [];
-                            const nextItems = existing.length === 0 ? [{ role: 'assistant', content: text }] : [...existing, { role: 'assistant', content: text }];
+                            const nextItems = existing.length === 0 ? [{ role: 'assistant', content: { text } }] : [...existing, { role: 'assistant', content: { text } }];
                             const id = persistNewIfNeeded(nextItems);
                             appendAndSave(id, nextItems);
                         }}

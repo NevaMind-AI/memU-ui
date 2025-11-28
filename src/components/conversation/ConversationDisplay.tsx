@@ -8,7 +8,7 @@ import {
 import { styled } from '@mui/material/styles'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { ConversationContent } from '../../types/conversation'
+import type { Conversation } from '../../types/conversation'
 
 const ConversationContainer = styled(Box)(() => ({
     width: '100%',
@@ -203,7 +203,7 @@ const MessageContent = styled(Typography)(({ theme }) => ({
 
 interface ConversationDisplayProps {
     header?: React.ReactNode
-    conversationContent?: ConversationContent | null
+    conversation?: Conversation | null
     contentLoading?: boolean
     contentError?: string | null
     emptyTitle?: string
@@ -213,7 +213,7 @@ interface ConversationDisplayProps {
 
 const ConversationDisplay: React.FC<ConversationDisplayProps> = ({
     header,
-    conversationContent,
+    conversation,
     contentLoading,
     contentError,
     emptyTitle,
@@ -251,14 +251,14 @@ const ConversationDisplay: React.FC<ConversationDisplayProps> = ({
                             Error: {contentError}
                         </Typography>
                     </Box>
-                ) : conversationContent && conversationContent.content ? (
-                    conversationContent.content.map((message, index) => (
-                        <Box key={`${conversationContent.conversation_id}-${index}`}>
+                ) : conversation && conversation.content ? (
+                    conversation.content.map((message, index) => (
+                        <Box key={`${conversation.conversation_id}-${index}`}>
                             {message.role === 'user' ? (
                                 <UserMessageContainer>
                                     <UserMessageBubble>
                                         <MessageContent>
-                                            {message.content}
+                                            {message.content.text}
                                         </MessageContent>
                                     </UserMessageBubble>
                                 </UserMessageContainer>
@@ -266,7 +266,7 @@ const ConversationDisplay: React.FC<ConversationDisplayProps> = ({
                                 <AgentMessageContainer>
                                     <MarkdownContainer>
                                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                            {message.content}
+                                            {message.content.text}
                                         </ReactMarkdown>
                                     </MarkdownContainer>
                                 </AgentMessageContainer>
