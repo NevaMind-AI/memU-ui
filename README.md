@@ -27,6 +27,21 @@ Star **memU-ui** to get notified about new releases and join our growing communi
 
 ## 🚀 Get Started
 
+```bash
+
+# make sure you are running memu-server
+# 
+# quick start by docker:
+# 
+# docker pull nevamindai/memu-server:latest
+# export OPENAI_API_KEY=your-open-ai-key
+# docker run --rm -p 8000:8000 -e OPENAI_API_KEY=$OPENAI_API_KEY nevamindai/memu-server:latest
+
+npm i
+npm run dev
+
+```
+
 ## 🔑 Key Features
 
 ### **Quick Deployment**
